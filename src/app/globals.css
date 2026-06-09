@@ -1,0 +1,103 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+@layer base {
+  :root {
+    /* Light Theme (optional fallback) */
+    --background: 220 15% 96%; /* Light Gray */
+    --foreground: 230 15% 10%;
+
+    --primary: 265 80% 65%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 195 85% 65%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 28 90% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 15% 85%;
+    --muted-foreground: 220 10% 30%;
+
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 10% 80%;
+    --input: 220 10% 80%;
+    --ring: 265 80% 65%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 230 15% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 230 15% 10%;
+
+    --radius: 0.5rem;
+
+    --chart-1: 160 84% 45%;  /* Emerald */
+    --chart-2: 265 85% 65%;  /* Violet */
+    --chart-3: 28 90% 65%;   /* Orange */
+    --chart-4: 195 85% 65%;  /* Cyan */
+    --chart-5: 340 85% 65%;  /* Rose */
+  }
+
+  .dark {
+    /* DARK THEME – Full Multicolor Aesthetic */
+    --background: 230 15% 10%;          /* Charcoal */
+    --foreground: 0 0% 95%;             /* Almost white */
+
+    --primary: 265 85% 65%;             /* Violet */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 195 85% 65%;           /* Cyan */
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 28 90% 65%;               /* Orange */
+    --accent-foreground: 0 0% 100%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --destructive: 0 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 14% 30%;
+    --input: 220 14% 30%;
+    --ring: 265 85% 65%;
+
+    --card: 230 12% 15%;                /* Deep Navy */
+    --card-foreground: 0 0% 98%;
+
+    --popover: 230 12% 15%;
+    --popover-foreground: 0 0% 98%;
+
+    --sidebar-background: 230 12% 12%;  /* Even darker */
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 265 85% 65%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 195 85% 65%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 220 14% 30%;
+    --sidebar-ring: 265 85% 65%;
+
+    --chart-1: 160 84% 45%;  /* Emerald */
+    --chart-2: 265 85% 65%;  /* Violet */
+    --chart-3: 28 90% 65%;   /* Orange */
+    --chart-4: 195 85% 65%;  /* Cyan */
+    --chart-5: 340 85% 65%;  /* Rose */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground; /* Set body background to light gray */
+  }
+}
