@@ -29,10 +29,7 @@ export function SecurityDashboard() {
 
   const fetchSecurityData = async () => {
     try {
-      const securityKey = process.env.NEXT_PUBLIC_SECURITY_KEY || "qg-security-key";
-      const res = await fetch("/api/security/logs", {
-        headers: { Authorization: `Bearer ${securityKey}` },
-      });
+      const res = await fetch("/api/security/logs");
 
       if (res.ok) {
         const data = await res.json();

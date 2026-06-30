@@ -25,13 +25,6 @@ export function middleware(request: NextRequest) {
   const ip = getClientIP(request);
   const path = request.nextUrl.pathname;
 
-  if (path.startsWith("/api/security/logs")) {
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.SECURITY_KEY || "qg-security-key"}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  }
-
   const rateLimitResult = checkRateLimit(ip, {
     maxRequests: 100,
     windowMs: 60000,
