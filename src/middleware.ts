@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { detectSQLInjection, detectXSS, detectPathTraversal, detectCommandInjection, getAllSecurityHeaders } from "@/lib/security";
+import { detectSQLInjection, detectXSS, detectPathTraversal, detectCommandInjection } from "@/lib/security";
 
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for");
@@ -10,26 +10,13 @@ function getClientIP(request: NextRequest): string {
   return request.headers.get("x-real-ip") || "unknown";
 }
 
-const inMemoryLogs: Array<{
-  timestamp: string;
-  type: string;
-  ip: string;
-  path: string;
-  threat: string;
-  details: string;
-}> = [];
-
-export function getMiddlewareLogs() {
-  return inMemoryLogs.slice(-100);
-}
-
 export function middleware(request: NextRequest) {
   const ip = getClientIP(request);
   const path = request.nextUrl.pathname;
 
-  const now = Date.now();
-  const windowMs = 60000;
-  const maxRequests = 100;
+  if (path.startsWith("/api/security/")) {
+    return NextResponse.next();
+  }
 
   const url = request.nextUrl.toString();
 
@@ -42,16 +29,6 @@ export function middleware(request: NextRequest) {
 
   for (const { check, threat } of checks) {
     if (!check.safe) {
-      inMemoryLogs.push({
-        timestamp: new Date().toISOString(),
-        type: threat,
-        ip,
-        path,
-        threat,
-        details: check.details || `${threat} detected`,
-      });
-      if (inMemoryLogs.length > 500) inMemoryLogs.splice(0, inMemoryLogs.length - 500);
-
       return NextResponse.json(
         { error: "Request blocked", threat, details: check.details },
         { status: 403 }
@@ -73,14 +50,6 @@ export function middleware(request: NextRequest) {
 
         for (const check of filenameChecks) {
           if (!check.safe) {
-            inMemoryLogs.push({
-              timestamp: new Date().toISOString(),
-              type: "MALICIOUS_UPLOAD",
-              ip,
-              path,
-              threat: check.threatType || "UNKNOWN",
-              details: `Malicious filename: ${filename}`,
-            });
             return NextResponse.json(
               { error: "Malicious filename detected", threat: check.threatType, details: check.details },
               { status: 403 }
@@ -92,10 +61,12 @@ export function middleware(request: NextRequest) {
   }
 
   const response = NextResponse.next();
-  const headers = getAllSecurityHeaders();
-  for (const [key, value] of Object.entries(headers)) {
-    response.headers.set(key, value);
-  }
+
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  response.headers.set("X-XSS-Protection", "1; mode=block");
+  response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+
   return response;
 }
 
