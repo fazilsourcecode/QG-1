@@ -215,7 +215,6 @@ export default function UploadCat2CreditsPage() {
 
           const { scanFile } = await import("@/lib/file-scanner");
           const scanResult = await scanFile(file);
-          console.log("[SECURITY SCAN]", file.name, scanResult);
           if (!scanResult.safe) {
             throw new Error(`BLOCKED: ${scanResult.details}`);
           }
