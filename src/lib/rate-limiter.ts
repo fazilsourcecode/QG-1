@@ -1,4 +1,4 @@
-import { redis } from "./redis";
+import { getRedis } from "./redis";
 
 interface RateLimitEntry {
   timestamps: number[];
@@ -87,6 +87,7 @@ export async function logSecurityEvent(
   details: string
 ): Promise<void> {
   try {
+    const redis = getRedis();
     const entry = {
       timestamp: new Date().toISOString(),
       type,
@@ -114,6 +115,7 @@ export async function getSecurityLogs(
   details: string;
 }>> {
   try {
+    const redis = getRedis();
     const raw = await redis.lrange(REDIS_LOG_KEY, 0, limit - 1);
     return raw.map((item) => JSON.parse(item));
   } catch {

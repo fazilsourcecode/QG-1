@@ -234,6 +234,22 @@ export default function UploadPage() {
       reader.onloadend = async () => {
         try {
           const base64String = reader.result as string
+
+          // Security scan before AI processing
+          const scanRes = await fetch("/api/security/scan", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              filename: file.name,
+              mimeType: file.type,
+              dataURL: base64String,
+            }),
+          });
+          const scanResult = await scanRes.json();
+          if (!scanResult.safe) {
+            throw new Error(`BLOCKED: ${scanResult.details}`);
+          }
+
           const result = await extractHandwrittenMarks({ photoUrl: base64String })
 
           // Process the marks to ensure they follow the required structure
