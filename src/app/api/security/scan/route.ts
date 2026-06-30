@@ -1,6 +1,18 @@
 import { NextResponse } from "next/server";
 import { scanFileFromDataURL } from "@/lib/file-scanner";
-import { logSecurityEvent } from "@/lib/rate-limiter";
+
+export const dynamic = "force-dynamic";
+
+async function logToRedis(entry: any) {
+  try {
+    const { getRedis } = await import("@/lib/redis");
+    const redis = getRedis();
+    await redis.lpush("qg:security:logs", JSON.stringify(entry));
+    await redis.ltrim("qg:security:logs", 0, 499);
+  } catch {
+    // Redis unavailable — fail silently
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -17,13 +29,14 @@ export async function POST(request: Request) {
 
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
-    await logSecurityEvent(
-      result.safe ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
+    await logToRedis({
+      timestamp: new Date().toISOString(),
+      type: result.safe ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
       ip,
-      "/upload",
-      result.threat,
-      result.details
-    );
+      path: "/upload",
+      threat: result.threat,
+      details: result.details,
+    });
 
     return NextResponse.json(result);
   } catch (error) {
