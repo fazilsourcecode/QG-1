@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+async function getRedis() {
+  const { Redis } = await import("@upstash/redis");
+  return new Redis({
+    url: process.env.UPSTASH_REDIS_REST_URL!,
+    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+  });
+}
+
 export async function POST(request: Request) {
   try {
     const { filename, threat, details } = await request.json();
@@ -15,23 +23,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    const entry = {
+    const redis = await getRedis();
+    await redis.lpush("qg:security:logs", JSON.stringify({
       timestamp: new Date().toISOString(),
       type: threat === "CLEAN" ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
       ip,
       path: "/upload",
       threat: threat || "CLEAN",
       details: details || `File ${filename} scanned`,
-    };
-
-    await fetch(`${url}/lpush/qg%3Asecurity%3Alogs`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify([JSON.stringify(entry)]),
-    });
+    }));
+    await redis.ltrim("qg:security:logs", 0, 499);
 
     return NextResponse.json({ ok: true });
   } catch {
