@@ -212,6 +212,13 @@ export default function UploadCat2CreditsPage() {
       reader.onloadend = async () => {
         try {
           const base64String = reader.result as string
+
+          const { scanFile } = await import("@/lib/file-scanner");
+          const scanResult = await scanFile(file);
+          if (!scanResult.safe) {
+            throw new Error(`BLOCKED: ${scanResult.details}`);
+          }
+
           const result = await extractHandwrittenMarks({ photoUrl: base64String })
 
           // Process the marks to ensure they follow the required structure
