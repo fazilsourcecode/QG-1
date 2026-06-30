@@ -11,29 +11,25 @@ export async function POST(request: Request) {
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (!url || !token) {
-      return NextResponse.json({ ok: false, error: "no env vars" });
+      return NextResponse.json({ ok: true });
     }
 
-    const entry = JSON.stringify({
+    const { Redis } = await import("@upstash/redis");
+    const redis = new Redis({ url, token });
+
+    await redis.lpush("qg:security:logs", JSON.stringify({
       timestamp: new Date().toISOString(),
       type: threat === "CLEAN" ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
       ip,
       path: "/upload",
       threat: threat || "CLEAN",
       details: details || `File ${filename} scanned`,
-    });
+    }));
 
-    const redisRes = await fetch(`${url}/lpush/qg%3Asecurity%3Alogs`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify([entry]),
-    });
+    await redis.ltrim("qg:security:logs", 0, 499);
 
-    return NextResponse.json({ ok: redisRes.ok, status: redisRes.status });
-  } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "unknown" });
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ ok: true });
   }
 }
