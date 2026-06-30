@@ -1,3 +1,5 @@
+import { redis } from "./redis";
+
 interface RateLimitEntry {
   timestamps: number[];
 }
@@ -13,7 +15,7 @@ function cleanup(): void {
   lastCleanup = now;
 
   for (const [key, entry] of store.entries()) {
-    entry.timestamps = entry.timestamps.filter(t => now - t < 3600000);
+    entry.timestamps = entry.timestamps.filter((t) => now - t < 3600000);
     if (entry.timestamps.length === 0) {
       store.delete(key);
     }
@@ -45,7 +47,7 @@ export function checkRateLimit(
   }
 
   const entry = store.get(identifier)!;
-  entry.timestamps = entry.timestamps.filter(t => t > windowStart);
+  entry.timestamps = entry.timestamps.filter((t) => t > windowStart);
 
   if (entry.timestamps.length >= maxRequests) {
     const oldestInWindow = entry.timestamps[0];
@@ -74,36 +76,47 @@ export function getRateLimitStats(): Record<string, number> {
   return stats;
 }
 
-const securityLogs: Array<{
+const REDIS_LOG_KEY = "qg:security:logs";
+const MAX_LOGS = 500;
+
+export async function logSecurityEvent(
+  type: string,
+  ip: string,
+  path: string,
+  threat: string,
+  details: string
+): Promise<void> {
+  try {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      type,
+      ip,
+      path,
+      threat,
+      details,
+    };
+
+    await redis.lpush(REDIS_LOG_KEY, JSON.stringify(entry));
+    await redis.ltrim(REDIS_LOG_KEY, 0, MAX_LOGS - 1);
+  } catch {
+    // Redis unavailable — fail silently
+  }
+}
+
+export async function getSecurityLogs(
+  limit: number = 100
+): Promise<Array<{
   timestamp: string;
   type: string;
   ip: string;
   path: string;
   threat: string;
   details: string;
-}> = [];
-
-export function logSecurityEvent(
-  type: string,
-  ip: string,
-  path: string,
-  threat: string,
-  details: string
-): void {
-  securityLogs.push({
-    timestamp: new Date().toISOString(),
-    type,
-    ip,
-    path,
-    threat,
-    details,
-  });
-
-  if (securityLogs.length > 1000) {
-    securityLogs.splice(0, securityLogs.length - 1000);
+}>> {
+  try {
+    const raw = await redis.lrange(REDIS_LOG_KEY, 0, limit - 1);
+    return raw.map((item) => JSON.parse(item));
+  } catch {
+    return [];
   }
-}
-
-export function getSecurityLogs(limit: number = 100): typeof securityLogs {
-  return securityLogs.slice(-limit);
 }

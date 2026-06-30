@@ -18,7 +18,7 @@ function logAttack(
   threat: string,
   details: string
 ): void {
-  logSecurityEvent(type, ip, path, threat, details);
+  logSecurityEvent(type, ip, path, threat, details).catch(() => {});
 }
 
 export function middleware(request: NextRequest) {
