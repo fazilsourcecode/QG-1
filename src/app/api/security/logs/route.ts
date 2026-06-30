@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (!url || !token) {
-      return NextResponse.json({ logs: [], stats: emptyStats, error: "no env vars" });
+      return NextResponse.json({ logs: [], stats: emptyStats });
     }
 
     const limit = parseInt(new URL(request.url).searchParams.get("limit") || "100");
@@ -23,13 +23,17 @@ export async function GET(request: Request) {
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
-    const resText = await res.text();
-
     if (!res.ok) {
-      return NextResponse.json({ logs: [], stats: emptyStats, error: resText, status: res.status });
+      return NextResponse.json({ logs: [], stats: emptyStats });
     }
 
-    const raw: string[] = JSON.parse(resText);
+    const body = await res.json();
+    const raw: string[] = body.result || body;
+
+    if (!Array.isArray(raw)) {
+      return NextResponse.json({ logs: [], stats: emptyStats });
+    }
+
     const logs = raw.map((item) => {
       try { return JSON.parse(item); } catch { return null; }
     }).filter(Boolean);
@@ -46,7 +50,7 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json({ logs, stats });
-  } catch (e) {
-    return NextResponse.json({ logs: [], stats: emptyStats, error: e instanceof Error ? e.message : "unknown" });
+  } catch {
+    return NextResponse.json({ logs: [], stats: emptyStats });
   }
 }
