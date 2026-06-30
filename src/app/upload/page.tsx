@@ -235,17 +235,9 @@ export default function UploadPage() {
         try {
           const base64String = reader.result as string
 
-          // Security scan before AI processing
-          const scanRes = await fetch("/api/security/scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              filename: file.name,
-              mimeType: file.type,
-              dataURL: base64String,
-            }),
-          });
-          const scanResult = await scanRes.json();
+          // Security scan (client-side - no file sent to server)
+          const { scanFile } = await import("@/lib/file-scanner");
+          const scanResult = await scanFile(file);
           if (!scanResult.safe) {
             throw new Error(`BLOCKED: ${scanResult.details}`);
           }
