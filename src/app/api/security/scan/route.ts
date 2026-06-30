@@ -12,23 +12,27 @@ export async function POST(request: Request) {
       const url = process.env.UPSTASH_REDIS_REST_URL;
       const token = process.env.UPSTASH_REDIS_REST_TOKEN;
       if (url && token) {
-        await fetch(`${url}/lpush/qg:security:logs`, {
+        const entry = {
+          timestamp: new Date().toISOString(),
+          type: threat === "CLEAN" ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
+          ip,
+          path: "/upload",
+          threat: threat || "CLEAN",
+          details: details || `File ${filename} scanned`,
+        };
+
+        const redisRes = await fetch(`${url}/lpush/qg:security:logs`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify([
-            JSON.stringify({
-              timestamp: new Date().toISOString(),
-              type: threat === "CLEAN" ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
-              ip,
-              path: "/upload",
-              threat: threat || "CLEAN",
-              details: details || `File ${filename} scanned`,
-            }),
-          ]),
+          body: JSON.stringify([JSON.stringify(entry)]),
         });
+
+        if (!redisRes.ok) {
+          console.error("Redis write failed:", redisRes.status, await redisRes.text());
+        }
       }
     } catch {}
 

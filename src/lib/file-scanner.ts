@@ -37,6 +37,16 @@ function detectType(bytes: Uint8Array): string | null {
   return null;
 }
 
+async function logScan(filename: string, threat: string, details: string) {
+  try {
+    await fetch("/api/security/scan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename, threat, details }),
+    });
+  } catch {}
+}
+
 export async function scanFile(file: File): Promise<ScanResult> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   const detectedType = detectType(bytes);
@@ -45,20 +55,24 @@ export async function scanFile(file: File): Promise<ScanResult> {
   const MALICIOUS_EXTS = new Set([".exe", ".msi", ".bat", ".cmd", ".sh", ".ps1", ".scr", ".com", ".pif"]);
 
   if (MALICIOUS_EXTS.has(ext)) {
-    return {
+    const result = {
       safe: false,
       threat: "MALICIOUS_EXTENSION",
       details: `Blocked: ${file.name} has dangerous extension ${ext}`,
     };
+    await logScan(file.name, result.threat, result.details);
+    return result;
   }
 
   for (const [name] of Object.entries(MALICIOUS_SIGNATURES)) {
     if (detectedType === name) {
-      return {
+      const result = {
         safe: false,
         threat: name,
         details: `Malicious file detected: ${file.name} is actually ${name}`,
       };
+      await logScan(file.name, result.threat, result.details);
+      return result;
     }
   }
 
@@ -69,37 +83,30 @@ export async function scanFile(file: File): Promise<ScanResult> {
 
   const expectedMime = EXT_TO_MIME[ext];
   if (expectedMime && detectedType && expectedMime !== detectedType) {
-    return {
+    const result = {
       safe: false,
       threat: "FILE_MASQUERADE",
       details: `File ${file.name} extension says ${expectedMime} but actual type is ${detectedType}`,
     };
+    await logScan(file.name, result.threat, result.details);
+    return result;
   }
 
   if (!detectedType && bytes.length > 0) {
-    return {
+    const result = {
       safe: false,
       threat: "UNKNOWN_TYPE",
       details: `Cannot identify ${file.name}. Possible obfuscation.`,
     };
+    await logScan(file.name, result.threat, result.details);
+    return result;
   }
 
-  try {
-    await fetch("/api/security/scan", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        filename: file.name,
-        mimeType: file.type,
-        threat: "CLEAN",
-        details: `File ${file.name} passed security checks`,
-      }),
-    });
-  } catch {}
-
-  return {
+  const result = {
     safe: true,
     threat: "CLEAN",
     details: `File ${file.name} passed all security checks`,
   };
+  await logScan(file.name, result.threat, result.details);
+  return result;
 }
