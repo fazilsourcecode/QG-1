@@ -2,14 +2,6 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-async function getRedis() {
-  const { Redis } = await import("@upstash/redis");
-  return new Redis({
-    url: process.env.UPSTASH_REDIS_REST_URL!,
-    token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-  });
-}
-
 export async function GET(request: Request) {
   const emptyStats = {
     total_events: 0, sql_injection: 0, xss: 0, path_traversal: 0,
@@ -25,10 +17,30 @@ export async function GET(request: Request) {
     }
 
     const limit = parseInt(new URL(request.url).searchParams.get("limit") || "100");
-    const redis = await getRedis();
-    const raw: string[] = await redis.lrange("qg:security:logs", 0, limit - 1);
 
-    const logs = raw.map((item) => {
+    const res = await fetch(`${url}/lrange/qg%3Asecurity%3Alogs/0/${limit - 1}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      return NextResponse.json({ logs: [], stats: emptyStats });
+    }
+
+    const body = await res.json();
+    const raw: any[] = Array.isArray(body.result) ? body.result : [];
+
+    const flat: string[] = [];
+    for (const item of raw) {
+      if (Array.isArray(item)) {
+        for (const sub of item) {
+          if (typeof sub === "string") flat.push(sub);
+        }
+      } else if (typeof item === "string") {
+        flat.push(item);
+      }
+    }
+
+    const logs = flat.map((item) => {
       try { return JSON.parse(item); } catch { return null; }
     }).filter(Boolean);
 

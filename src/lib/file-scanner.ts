@@ -39,12 +39,16 @@ function detectType(bytes: Uint8Array): string | null {
 
 async function logScan(filename: string, threat: string, details: string) {
   try {
-    await fetch("/api/security/scan", {
+    const res = await fetch("/api/security/scan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ filename, threat, details }),
     });
-  } catch {}
+    const data = await res.json();
+    console.log("[SCAN LOGGED]", filename, data);
+  } catch (e) {
+    console.error("[SCAN FAILED]", filename, e);
+  }
 }
 
 export async function scanFile(file: File): Promise<ScanResult> {
