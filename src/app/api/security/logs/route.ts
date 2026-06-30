@@ -29,7 +29,7 @@ export async function GET(request: Request) {
 
     const body = await res.json();
     const raw: any[] = Array.isArray(body.result) ? body.result : [];
-    const flat: string[] = raw.map((item: any) => Array.isArray(item) ? item[0] : item);
+    const flat: string[] = raw.flat(Infinity).filter((item: any) => typeof item === "string");
 
     const logs = flat.map((item) => {
       try { return JSON.parse(item); } catch { return null; }
