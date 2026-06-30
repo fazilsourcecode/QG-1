@@ -13,21 +13,23 @@ export async function GET(request: Request) {
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
     if (!url || !token) {
-      return NextResponse.json({ logs: [], stats: emptyStats });
+      return NextResponse.json({ logs: [], stats: emptyStats, error: "no env vars" });
     }
 
     const limit = parseInt(new URL(request.url).searchParams.get("limit") || "100");
 
     const res = await fetch(
-      `${url}/lrange/qg:security:logs/0/${limit - 1}`,
+      `${url}/lrange/qg%3Asecurity%3Alogs/0/${limit - 1}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
 
+    const resText = await res.text();
+
     if (!res.ok) {
-      return NextResponse.json({ logs: [], stats: emptyStats });
+      return NextResponse.json({ logs: [], stats: emptyStats, error: resText, status: res.status });
     }
 
-    const raw: string[] = await res.json();
+    const raw: string[] = JSON.parse(resText);
     const logs = raw.map((item) => {
       try { return JSON.parse(item); } catch { return null; }
     }).filter(Boolean);
@@ -44,7 +46,7 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json({ logs, stats });
-  } catch {
-    return NextResponse.json({ logs: [], stats: emptyStats });
+  } catch (e) {
+    return NextResponse.json({ logs: [], stats: emptyStats, error: e instanceof Error ? e.message : "unknown" });
   }
 }
