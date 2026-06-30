@@ -28,13 +28,10 @@ export async function GET(request: Request) {
     }
 
     const body = await res.json();
-    const raw: string[] = body.result || body;
+    const raw: any[] = Array.isArray(body.result) ? body.result : [];
+    const flat: string[] = raw.map((item: any) => Array.isArray(item) ? item[0] : item);
 
-    if (!Array.isArray(raw)) {
-      return NextResponse.json({ logs: [], stats: emptyStats });
-    }
-
-    const logs = raw.map((item) => {
+    const logs = flat.map((item) => {
       try { return JSON.parse(item); } catch { return null; }
     }).filter(Boolean);
 
