@@ -8,36 +8,41 @@ export async function POST(request: Request) {
 
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
 
-    try {
-      const url = process.env.UPSTASH_REDIS_REST_URL;
-      const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-      if (url && token) {
-        const entry = {
-          timestamp: new Date().toISOString(),
-          type: threat === "CLEAN" ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
-          ip,
-          path: "/upload",
-          threat: threat || "CLEAN",
-          details: details || `File ${filename} scanned`,
-        };
+    const url = process.env.UPSTASH_REDIS_REST_URL;
+    const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-        const redisRes = await fetch(`${url}/lpush/qg:security:logs`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify([JSON.stringify(entry)]),
-        });
+    if (!url || !token) {
+      return NextResponse.json({ ok: false, error: "Missing Redis env vars", url: !!url, token: !!token });
+    }
 
-        if (!redisRes.ok) {
-          console.error("Redis write failed:", redisRes.status, await redisRes.text());
-        }
-      }
-    } catch {}
+    const entry = {
+      timestamp: new Date().toISOString(),
+      type: threat === "CLEAN" ? "FILE_SCAN" : "MALICIOUS_UPLOAD",
+      ip,
+      path: "/upload",
+      threat: threat || "CLEAN",
+      details: details || `File ${filename} scanned`,
+    };
 
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ ok: true });
+    const redisRes = await fetch(`${url}/lpush/qg:security:logs`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([JSON.stringify(entry)]),
+    });
+
+    const redisBody = await redisRes.text();
+
+    return NextResponse.json({
+      ok: redisRes.ok,
+      status: redisRes.status,
+      redisBody,
+      hasUrl: !!url,
+      hasToken: !!token,
+    });
+  } catch (error) {
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Unknown" });
   }
 }
